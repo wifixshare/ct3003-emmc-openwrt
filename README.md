@@ -16,4 +16,7 @@ This repository builds an ImmortalWrt image for the Cetron CT3003 eMMC hardware 
 2. Select **Run workflow**.
 3. After it completes, download `CT3003-eMMC-firmware` from the run's artifacts. Manual builds also create a GitHub Release.
 
+Repeat builds automatically reuse the download cache, compiler cache and the
+cross-toolchain built for the exact same upstream source revision.
+
 Only flash an image intended for the eMMC version of the CT3003. Keep a serial-recovery path available before changing firmware.
