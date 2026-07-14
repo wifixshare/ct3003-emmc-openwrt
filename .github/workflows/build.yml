@@ -74,6 +74,8 @@ jobs:
         working-directory: openwrt
         run: |
           git clone --depth 1 https://github.com/vernesong/OpenClash.git package/openclash
+          git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git package/passwall-packages
+          git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall2.git package/passwall2
           cp ../dts/mt7981b-cetron-ct3003-emmc.dts target/linux/mediatek/dts/
           cp -a ../files/. files/
           cp ../config/ct3003-emmc.config .config
