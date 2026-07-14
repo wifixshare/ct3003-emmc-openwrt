@@ -1,9 +1,14 @@
 #!/bin/sh
 
 # LAN defaults requested for this image.
-uci set network.lan.ipaddr='192.168.2.1'
+uci set network.lan.ipaddr='192.168.6.1'
 uci set network.lan.netmask='255.255.255.0'
 uci commit network
+
+# Serve the LuCI interface over HTTP only.
+uci -q delete uhttpd.main.listen_https
+uci -q delete uhttpd.main.redirect_https
+uci commit uhttpd
 
 # Keep the first-login root account passwordless.
 passwd -d root 2>/dev/null || true

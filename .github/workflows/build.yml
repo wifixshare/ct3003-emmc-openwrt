@@ -139,6 +139,7 @@ jobs:
           name: CT3003 eMMC build ${{ github.run_number }}
           body: |
             ImmortalWrt firmware for Cetron CT3003 eMMC.
-            Default address: 192.168.2.1
+            LuCI: HTTP only
+            Default address: 192.168.6.1
             User: root (no password)
           files: release/*
