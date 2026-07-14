@@ -1,0 +1,19 @@
+# CT3003 eMMC OpenWrt Builder
+
+This repository builds an ImmortalWrt image for the Cetron CT3003 eMMC hardware using GitHub Actions.
+
+## Included
+
+- LuCI with HTTPS and Argon theme
+- OpenClash
+- DDNS, Samba4, UPnP, SQM, statistics, Wake-on-LAN, TTYD, HTTPS DNS Proxy and WireGuard LuCI support
+- Default LAN IP: `192.168.2.1`
+- Default login: `root` with no password
+
+## Build and download
+
+1. Open the **Actions** tab and choose **Build CT3003 eMMC firmware**.
+2. Select **Run workflow**.
+3. After it completes, download `CT3003-eMMC-firmware` from the run's artifacts. Manual builds also create a GitHub Release.
+
+Only flash an image intended for the eMMC version of the CT3003. Keep a serial-recovery path available before changing firmware.

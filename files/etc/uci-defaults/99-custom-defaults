@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# LAN defaults requested for this image.
+uci set network.lan.ipaddr='192.168.2.1'
+uci set network.lan.netmask='255.255.255.0'
+uci commit network
+
+# Keep the first-login root account passwordless.
+passwd -d root 2>/dev/null || true
+
+exit 0
