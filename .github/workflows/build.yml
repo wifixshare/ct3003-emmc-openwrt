@@ -40,17 +40,19 @@ jobs:
             https://github.com/airjinkela/immortalwrt-main.git openwrt
           echo "revision=$(git -C openwrt rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-      # A toolchain is only restored from an identical upstream commit. This
-      # prevents incompatible compiler/ABI files from being reused after a
-      # source update, while making repeat builds of the same revision faster.
+      # A toolchain is only restored for an identical upstream commit and
+      # identical build configuration. CCACHE and other developer options
+      # affect the host/toolchain wrappers, so reusing a cache across config
+      # changes can leave binutils and GCC in an inconsistent state.
       - name: Restore cross-toolchain cache
         id: toolchain-cache
         uses: actions/cache/restore@v4
         with:
           path: |
             openwrt/staging_dir/host
+            openwrt/staging_dir/hostpkg
             openwrt/staging_dir/toolchain-aarch64_cortex-a53_gcc-*
-          key: ${{ runner.os }}-ct3003-emmc-toolchain-${{ steps.source.outputs.revision }}
+          key: ${{ runner.os }}-ct3003-emmc-toolchain-${{ steps.source.outputs.revision }}-${{ hashFiles('config/ct3003-emmc.config') }}
 
       - name: Restore download cache
         id: download-cache
@@ -114,8 +116,8 @@ jobs:
       - name: Build reusable cross-toolchain
         working-directory: openwrt
         run: |
-          make tools/install -j"$(nproc)"
-          make toolchain/install -j"$(nproc)"
+          make tools/install -j"$(nproc)" || make tools/install -j1 V=s
+          make toolchain/install -j"$(nproc)" || make toolchain/install -j1 V=s
 
       # Save the completed toolchain before compiling packages. Package build
       # failures must not discard the most expensive reusable build stage.
@@ -125,6 +127,7 @@ jobs:
         with:
           path: |
             openwrt/staging_dir/host
+            openwrt/staging_dir/hostpkg
             openwrt/staging_dir/toolchain-aarch64_cortex-a53_gcc-*
           key: ${{ steps.toolchain-cache.outputs.cache-primary-key }}
 
