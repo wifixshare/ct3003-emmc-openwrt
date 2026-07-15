@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: ct3003-emmc-build
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -74,13 +74,21 @@ jobs:
         working-directory: openwrt
         run: |
           git clone --depth 1 https://github.com/vernesong/OpenClash.git package/openclash
-          git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git package/passwall-packages
-          # Newer geoview releases require Go 1.24/1.25, while the selected
-          # ImmortalWrt 24.10 buildroot ships Go 1.23. Pin only this package
-          # to its last Go 1.21-compatible recipe.
-          wget -qO package/passwall-packages/geoview/Makefile \
-            https://raw.githubusercontent.com/Openwrt-Passwall/openwrt-passwall-packages/a6a3c45a3059ad3f7e184b503da4541dc94ece24/geoview/Makefile
-          git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall2.git package/passwall2
+          # ImmortalWrt 24.10 ships Go 1.23. Pin PassWall2 and its package
+          # recipes to a matching release set: current upstream cores require
+          # Go 1.24-1.25 and cannot be built by this branch's toolchain.
+          git init package/passwall-packages
+          git -C package/passwall-packages remote add origin \
+            https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git
+          git -C package/passwall-packages fetch --depth 1 origin \
+            1f765fd55ff40d49221df91990ebe3ef9a669a63
+          git -C package/passwall-packages checkout --detach FETCH_HEAD
+          git init package/passwall2
+          git -C package/passwall2 remote add origin \
+            https://github.com/Openwrt-Passwall/openwrt-passwall2.git
+          git -C package/passwall2 fetch --depth 1 origin \
+            c8ed851e7a9f116c8743a6cfa95e25804237d3ec
+          git -C package/passwall2 checkout --detach FETCH_HEAD
           cp ../dts/mt7981b-cetron-ct3003-emmc.dts target/linux/mediatek/dts/
           cp -a ../files/. files/
           cp ../config/ct3003-emmc.config .config
