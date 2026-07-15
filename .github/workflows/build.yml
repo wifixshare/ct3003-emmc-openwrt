@@ -75,6 +75,11 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/vernesong/OpenClash.git package/openclash
           git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git package/passwall-packages
+          # Newer geoview releases require Go 1.24/1.25, while the selected
+          # ImmortalWrt 24.10 buildroot ships Go 1.23. Pin only this package
+          # to its last Go 1.21-compatible recipe.
+          wget -qO package/passwall-packages/geoview/Makefile \
+            https://raw.githubusercontent.com/Openwrt-Passwall/openwrt-passwall-packages/a6a3c45a3059ad3f7e184b503da4541dc94ece24/geoview/Makefile
           git clone --depth 1 https://github.com/Openwrt-Passwall/openwrt-passwall2.git package/passwall2
           cp ../dts/mt7981b-cetron-ct3003-emmc.dts target/linux/mediatek/dts/
           cp -a ../files/. files/
