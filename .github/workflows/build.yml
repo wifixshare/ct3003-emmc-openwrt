@@ -83,6 +83,12 @@ jobs:
           git -C package/passwall-packages fetch --depth 1 origin \
             1f765fd55ff40d49221df91990ebe3ef9a669a63
           git -C package/passwall-packages checkout --detach FETCH_HEAD
+          # The geodata release referenced by the compatible package snapshot
+          # was removed upstream. Use a current data-only recipe whose pinned
+          # GeoIP/GeoSite assets are still available; this does not affect the
+          # Go compatibility of sing-box or Xray.
+          wget -qO package/passwall-packages/v2ray-geodata/Makefile \
+            https://raw.githubusercontent.com/Openwrt-Passwall/openwrt-passwall-packages/eda14788fdeb07c6804d8bcf44d3eeec150930c1/v2ray-geodata/Makefile
           git init package/passwall2
           git -C package/passwall2 remote add origin \
             https://github.com/Openwrt-Passwall/openwrt-passwall2.git
@@ -101,12 +107,16 @@ jobs:
           make defconfig
           make download -j"$(nproc)"
 
-      - name: Compile firmware
+      - name: Build reusable cross-toolchain
         working-directory: openwrt
-        run: make -j"$(nproc)" V=s
+        run: |
+          make tools/install -j"$(nproc)"
+          make toolchain/install -j"$(nproc)"
 
+      # Save the completed toolchain before compiling packages. Package build
+      # failures must not discard the most expensive reusable build stage.
       - name: Save cross-toolchain cache
-        if: success() && steps.toolchain-cache.outputs.cache-hit != 'true'
+        if: steps.toolchain-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: |
@@ -114,15 +124,19 @@ jobs:
             openwrt/staging_dir/toolchain-aarch64_cortex-a53_gcc-*
           key: ${{ steps.toolchain-cache.outputs.cache-primary-key }}
 
+      - name: Compile firmware
+        working-directory: openwrt
+        run: make -j"$(nproc)" V=s
+
       - name: Save download cache
-        if: success() && steps.download-cache.outputs.cache-hit != 'true'
+        if: ${{ always() && steps.download-cache.outcome == 'success' && steps.download-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v4
         with:
           path: openwrt/dl
           key: ${{ steps.download-cache.outputs.cache-primary-key }}
 
       - name: Save compiler cache
-        if: success() && steps.ccache-cache.outputs.cache-hit != 'true'
+        if: ${{ always() && steps.ccache-cache.outcome == 'success' && steps.ccache-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v4
         with:
           path: openwrt/.ccache
