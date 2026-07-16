@@ -107,6 +107,10 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           make defconfig
+          # Fail immediately if the custom device selection was discarded.
+          # Without this guard, Kconfig silently selects the first Filogic
+          # profile and Actions can report success for the wrong router.
+          grep -q '^CONFIG_TARGET_mediatek_filogic_DEVICE_cetron_ct3003-emmc=y$' .config
           # Keep compiler caching enabled even when Kconfig hides developer
           # options, and create the cache path before any compiler is invoked.
           grep -q '^CONFIG_CCACHE=y$' .config
@@ -150,13 +154,16 @@ jobs:
           key: ${{ steps.ccache-cache.outputs.cache-primary-key }}
 
       - name: Collect firmware
-        if: always()
+        if: success()
         run: |
           mkdir -p release
           find openwrt/bin/targets/mediatek/filogic -maxdepth 1 -type f \
-            \( -name '*ct3003-emmc*' -o -name 'sha256sums' \) \
-            -exec cp {} release/ \; 2>/dev/null || true
-          cp openwrt/.config release/build.config 2>/dev/null || true
+            -name '*cetron_ct3003-emmc*' -exec cp {} release/ \;
+          cp openwrt/.config release/build.config
+          test -n "$(find release -maxdepth 1 -type f \
+            -name '*ct3003-emmc*sysupgrade.bin' -print -quit)"
+          (cd release && sha256sum * > SHA256SUMS)
+          ls -lh release
 
       - name: Upload Action artifact
         if: success()
