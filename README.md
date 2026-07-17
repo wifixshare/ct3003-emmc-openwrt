@@ -5,8 +5,8 @@ This repository builds an ImmortalWrt image for the Cetron CT3003 eMMC hardware 
 ## Included
 
 - LuCI over HTTP with Argon theme
-- OpenClash and PassWall2, including sing-box and Xray cores
-- DDNS, Samba4, UPnP, SQM, statistics, Wake-on-LAN, TTYD and WireGuard LuCI support
+- OpenClash with an embedded ARM64 Mihomo core, plus PassWall2 with sing-box and Xray
+- DDNS, Samba4, UPnP, SQM, statistics, Wake-on-LAN, TTYD, WireGuard and ZeroTier
 - Default LAN IP: `192.168.6.1`
 - Default login: `root` with no password
 

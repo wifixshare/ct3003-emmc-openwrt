@@ -128,13 +128,28 @@ sync_pinned_repo \
 cp "$REPO_DIR/dts/mt7981b-cetron-ct3003-emmc.dts" \
   "$SOURCE_DIR/target/linux/mediatek/dts/"
 cp -a "$REPO_DIR/files/." "$SOURCE_DIR/files/"
-cp "$REPO_DIR/config/ct3003-emmc.config" "$SOURCE_DIR/.config"
+
+log_section "Embed the pinned OpenClash Mihomo core"
+CORE_VERSION=1.19.28
+CORE_ARCHIVE="$DL_CACHE/mihomo-linux-arm64-v${CORE_VERSION}.gz"
+CORE_SHA256=2474450cd1c41dfa53036a54a4e85579f493d3af524d86c3d4b8e2b240b56cd2
+if [[ ! -f "$CORE_ARCHIVE" ]] || \
+   ! echo "$CORE_SHA256  $CORE_ARCHIVE" | sha256sum -c -; then
+  wget -O "$CORE_ARCHIVE" \
+    "https://github.com/MetaCubeX/mihomo/releases/download/v${CORE_VERSION}/mihomo-linux-arm64-v${CORE_VERSION}.gz"
+  echo "$CORE_SHA256  $CORE_ARCHIVE" | sha256sum -c -
+fi
+mkdir -p "$SOURCE_DIR/files/etc/openclash/core"
+gzip -dc "$CORE_ARCHIVE" > "$SOURCE_DIR/files/etc/openclash/core/clash_meta"
+chmod 0755 "$SOURCE_DIR/files/etc/openclash/core/clash_meta"
+file "$SOURCE_DIR/files/etc/openclash/core/clash_meta" | grep -q 'ARM aarch64'
 
 cd "$SOURCE_DIR"
 
 log_section "Update feeds and validate the CT3003 configuration"
 ./scripts/feeds update -a
 ./scripts/feeds install -a
+cp "$REPO_DIR/config/ct3003-emmc.config" .config
 make defconfig
 grep -q '^CONFIG_TARGET_mediatek_filogic_DEVICE_cetron_ct3003-emmc=y$' .config
 grep -q '^CONFIG_CCACHE=y$' .config
@@ -142,6 +157,15 @@ grep -q '^CONFIG_PACKAGE_luci-app-openclash=y$' .config
 grep -q '^CONFIG_PACKAGE_luci-app-passwall2=y$' .config
 grep -q '^CONFIG_PACKAGE_sing-box=y$' .config
 grep -q '^CONFIG_PACKAGE_xray-core=y$' .config
+grep -q '^CONFIG_PACKAGE_luci-app-samba4=y$' .config
+grep -q '^CONFIG_PACKAGE_samba4-server=y$' .config
+grep -q '^CONFIG_PACKAGE_luci-app-ddns=y$' .config
+grep -q '^CONFIG_PACKAGE_ddns-scripts=y$' .config
+grep -q '^CONFIG_PACKAGE_luci-proto-wireguard=y$' .config
+grep -q '^CONFIG_PACKAGE_wireguard-tools=y$' .config
+grep -q '^CONFIG_PACKAGE_luci-app-zerotier=y$' .config
+grep -q '^CONFIG_PACKAGE_zerotier=y$' .config
+test -x files/etc/openclash/core/clash_meta
 
 log_section "Download sources"
 make download -j"$JOBS"
@@ -154,6 +178,13 @@ log_section "Compile CT3003 eMMC firmware"
 if ! nice -n 5 make -j"$JOBS"; then
   echo "Parallel firmware build failed; retrying with -j1 V=s." >&2
   nice -n 5 make -j1 V=s
+fi
+
+rootfs_core="$(find build_dir -path '*/root-mediatek/etc/openclash/core/clash_meta' \
+  -type f -perm -u+x -print -quit)"
+if [[ -z "$rootfs_core" ]]; then
+  echo "The embedded OpenClash core is missing from the firmware rootfs." >&2
+  exit 1
 fi
 
 log_section "Collect and verify firmware"
@@ -176,6 +207,12 @@ if [[ -z "$firmware" ]]; then
   echo "CT3003 eMMC sysupgrade firmware was not generated." >&2
   exit 1
 fi
+
+manifest="$(find "$RELEASE_DIR" -maxdepth 1 -type f -name '*.manifest' -print -quit)"
+for package in luci-app-openclash luci-app-samba4 luci-app-ddns \
+  luci-proto-wireguard wireguard-tools luci-app-zerotier zerotier; do
+  grep -q "^${package} " "$manifest"
+done
 
 (
   cd "$RELEASE_DIR"

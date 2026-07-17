@@ -99,13 +99,28 @@ jobs:
           git -C package/passwall2 checkout --detach FETCH_HEAD
           cp ../dts/mt7981b-cetron-ct3003-emmc.dts target/linux/mediatek/dts/
           cp -a ../files/. files/
-          cp ../config/ct3003-emmc.config .config
+          # Embed a pinned ARM64 Mihomo core for OpenClash. The digest comes
+          # from the corresponding upstream GitHub release asset.
+          core_archive=dl/mihomo-linux-arm64-v1.19.28.gz
+          core_sha256=2474450cd1c41dfa53036a54a4e85579f493d3af524d86c3d4b8e2b240b56cd2
+          if [ ! -f "$core_archive" ] || \
+             ! echo "$core_sha256  $core_archive" | sha256sum -c -; then
+            wget -O "$core_archive" \
+              https://github.com/MetaCubeX/mihomo/releases/download/v1.19.28/mihomo-linux-arm64-v1.19.28.gz
+            echo "$core_sha256  $core_archive" | sha256sum -c -
+          fi
+          mkdir -p files/etc/openclash/core
+          gzip -dc "$core_archive" > files/etc/openclash/core/clash_meta
+          chmod 0755 files/etc/openclash/core/clash_meta
 
       - name: Install feeds and download sources
         working-directory: openwrt
         run: |
           ./scripts/feeds update -a
           ./scripts/feeds install -a
+          # Feed installation regenerates package metadata and can discard
+          # package selections that were loaded before feed packages existed.
+          cp ../config/ct3003-emmc.config .config
           make defconfig
           # Fail immediately if the custom device selection was discarded.
           # Without this guard, Kconfig silently selects the first Filogic
@@ -114,6 +129,12 @@ jobs:
           # Keep compiler caching enabled even when Kconfig hides developer
           # options, and create the cache path before any compiler is invoked.
           grep -q '^CONFIG_CCACHE=y$' .config
+          grep -q '^CONFIG_PACKAGE_luci-app-openclash=y$' .config
+          grep -q '^CONFIG_PACKAGE_luci-app-samba4=y$' .config
+          grep -q '^CONFIG_PACKAGE_luci-app-ddns=y$' .config
+          grep -q '^CONFIG_PACKAGE_luci-proto-wireguard=y$' .config
+          grep -q '^CONFIG_PACKAGE_luci-app-zerotier=y$' .config
+          test -x files/etc/openclash/core/clash_meta
           mkdir -p .ccache
           make download -j"$(nproc)"
 
